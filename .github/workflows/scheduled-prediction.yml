@@ -1,0 +1,32 @@
+# .github/workflows/scheduled-prediction.yml
+# FINAL ROBUST TIMEZONE-AWARE VERSION
+name: Scheduled Stock Prediction
+
+on:
+  workflow_dispatch:
+  schedule:
+    # === 關鍵修改：擴大執行時間窗口 ===
+    # 在 UTC 時間的 13:00 到 21:00 之間，每 15 分鐘執行一次。
+    # 這個範圍可以完全覆蓋冬令時間 (UTC 14:30-21:00) 和夏令時間 (UTC 13:30-20:00) 的開盤時段。
+    # 腳本內部的邏輯會判斷確切的開盤時間。
+    - cron: '*/15 13-21 * * 1-5'
+
+jobs:
+  run-prediction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies from requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run LIVE prediction script
+        run: python live_predict.py
