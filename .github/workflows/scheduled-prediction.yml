@@ -1,15 +1,22 @@
-# .github/workflows/scheduled-prediction.yml
-# FINAL ROBUST TIMEZONE-AWARE VERSION
+# V2 - 增加收盤後執行的排程
 name: Scheduled Stock Prediction
 
 on:
   workflow_dispatch:
   schedule:
-    # === 關鍵修改：擴大執行時間窗口 ===
-    # 在 UTC 時間的 13:00 到 21:00 之間，每 15 分鐘執行一次。
-    # 這個範圍可以完全覆蓋冬令時間 (UTC 14:30-21:00) 和夏令時間 (UTC 13:30-20:00) 的開盤時段。
-    # 腳本內部的邏輯會判斷確切的開盤時間。
-    - cron: '*/15 13-21 * * 1-5'
+    # 規則一：盤中執行 (美東時間週一至週五 9:30 - 16:00)
+    # 在 UTC 時間的 13:30 到 20:00 之間，每 15 分鐘執行一次。
+    # 這個範圍可以完全覆蓋冬令時間和夏令時間的開盤時段。
+    - cron: '*/15 13-20 * * 1-5'
+
+    # === 新增規則二：收盤後複盤執行 ===
+    # 我們的目標是在美東時間下午 4:30 執行一次。
+    # - 夏令時間 (EDT, UTC-4): 16:30 ET = 20:30 UTC
+    # - 冬令時間 (EST, UTC-5): 16:30 ET = 21:30 UTC
+    # 為了同時兼容，我們在這兩個 UTC 時間點都安排執行。
+    # Python 腳本內部會判斷是否是市場假日，如果不是假日，則執行並更新 README。
+    - cron: '30 20 * * 1-5' # 夏令時的收盤後複盤
+    - cron: '30 21 * * 1-5' # 冬令時的收盤後複盤
 
 jobs:
   run-prediction:
@@ -26,7 +33,9 @@ jobs:
       - name: Install dependencies from requirements.txt
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          # 我們需要 pandas_market_calendars 來判斷假日
+          pip install -r requirements.txt pandas_market_calendars
 
       - name: Run LIVE prediction script
-        run: python live_predict.py
+        # 腳本名稱已改為 run_prediction.py 以匹配我們之前的開發
+        run: python run_prediction.py
